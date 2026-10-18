@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+const engine=fs.readFileSync('vendor/three.module.min.js','utf8');
+const start=engine.lastIndexOf('export{');
+if(start<0)throw new Error('Unexpected engine export format');
+const end=engine.indexOf('}',start),exports=engine.slice(start+7,end).split(',').map(pair=>{const [local,alias]=pair.trim().split(/\s+as\s+/);return (alias||local)+':'+local;}).join(',');
+const bundled='const THREE=(()=>{'+engine.slice(0,start)+';return {'+exports+'};})();';
+let html=fs.readFileSync('src/index.html','utf8');
+for(const [key,value] of [['STYLES',fs.readFileSync('src/style.css','utf8')],['ENGINE',bundled],['SIMULATION',fs.readFileSync('src/simulation.js','utf8')],['APP',fs.readFileSync('src/app.js','utf8')],['LICENSE',fs.readFileSync('vendor/THREE-LICENSE.txt','utf8')]])html=html.replace('/* '+key+' */',()=>value);
+fs.mkdirSync('dist',{recursive:true});fs.writeFileSync('dist/index.html',html);fs.writeFileSync('CityDesigner.html',html);
+console.log('Built self-contained HTML: '+(Buffer.byteLength(html)/1024).toFixed(0)+' KB');
